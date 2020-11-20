@@ -24,6 +24,9 @@ const instagram = {
 		//Wait for page to load
 		await instagram.page.goto(BASE_URL, { waitUntil: "networkidle2" });
 
+		await instagram.page.waitForSelector("input[name=username]");
+		await instagram.page.waitForSelector("input[name=password]");
+
 		//Type username and password
 		await instagram.page.type("input[name=username]", username, {
 			delay: 50,
