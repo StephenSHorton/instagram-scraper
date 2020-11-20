@@ -11,4 +11,5 @@ const password = "001324197Mormondude1";
 	await ig.navigateToProfile();
 
 	await ig.getFollowerInformation();
+	// await ig.getFollowerInformationViaNewTabs();
 })();

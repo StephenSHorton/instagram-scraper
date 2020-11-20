@@ -1,73 +1,15 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-const { debug } = require("console");
+let exPath = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
 
 const BASE_URL = "https://instagram.com/";
-
-const getPaginatedItems = async (ig, limit) => {
-	let items = [];
-	while (items.length < limit) {
-		items = await ig.page.evaluate(async () => {
-			const extractedElements = await ig.page.$x(
-				"//html/body/div[5]/div/div/div[2]/ul/div/li"
-			);
-			const _items = [];
-			for (let element of extractedElements) {
-				const nameDiv = await element.$x("//div/div[1]/div[2]/div[2]")
-					.innerText;
-				_items.push(nameDiv.innerText);
-			}
-			return _items;
-		});
-		const height = await ig.page.evaluate(
-			`document.querySelector("${scrollableSectionSelector}").scrollHeight`
-		);
-		await ig.page.evaluate(
-			`document.querySelector("${scrollableSectionSelector}").scrollTop = ${height}`
-		);
-		await ig.page.waitForTimeout(scrollDelay);
-	}
-	return items;
-};
-
-const extractItems = () => {
-	const extractedElements = document.querySelectorAll("#boxes > div.box");
-	const items = [];
-	for (let element of extractedElements) {
-		items.push(element.innerText);
-	}
-	return items;
-};
-
-const scrapeInfiniteScrollItems = async (
-	page,
-	extractItems,
-	itemTargetCount,
-	scrollableSectionSelector,
-	scrollDelay = 1000
-) => {
-	let items = [];
-	try {
-		let previousHeight;
-		while (items.length < itemTargetCount) {
-			items = await page.evaluate(extractItems);
-			previousHeight = await ig.page.evaluate(
-				`document.querySelector("${scrollableSectionSelector}").scrollHeight`
-			);
-			await ig.page.evaluate(
-				`document.querySelector("${scrollableSectionSelector}").scrollTop = ${previousHeight}`
-			);
-			await page.waitForTimeout(scrollDelay);
-		}
-	} catch (e) {}
-	return items;
-};
 
 const instagram = {
 	browser: null,
 	page: null,
 
 	initialize: async () => {
+		console.log("Starting web-scrape...");
 		instagram.browser = await puppeteer.launch({
 			headless: false,
 			// devtools: true,
@@ -77,6 +19,7 @@ const instagram = {
 	},
 
 	login: async (username, password) => {
+		console.log("Logging in...");
 		//Wait for page to load
 		await instagram.page.goto(BASE_URL, { waitUntil: "networkidle2" });
 
@@ -104,6 +47,7 @@ const instagram = {
 	},
 
 	navigateToProfile: async () => {
+		console.log("Navigating to profile...");
 		//Click not now to keep notifications off
 		const notNowButton2 = await instagram.page.waitForSelector(
 			"body > div.RnEpo.Yx5HN > div > div > div > div.mt3GC > button.aOOlW.HoLwm"
@@ -125,6 +69,103 @@ const instagram = {
 	},
 
 	getFollowerInformation: async () => {
+		console.log("Getting follower information...");
+		//Get total followers
+		const followersTotalSelector =
+			"#react-root > section > main > div > header > section > ul > li:nth-child(2) > a > span";
+		await instagram.page.waitForSelector(
+			//Wait for selector to load
+			followersTotalSelector
+		);
+		const totalFollowers = await instagram.page.$eval(
+			followersTotalSelector,
+			(el) => Number(el.innerText)
+		);
+
+		//Click on followers
+		const followersLink = await instagram.page.waitForSelector(
+			"#react-root > section > main > div > header > section > ul > li:nth-child(2) > a"
+		);
+		await followersLink.click();
+
+		//Scroll and extract items from the page
+		const scrollableSectionSelector =
+			"body > div.RnEpo.Yx5HN > div > div > div.isgrP";
+		await instagram.page.waitForSelector(
+			//Wait for selector to load
+			scrollableSectionSelector
+		);
+
+		let previousHeight = 0;
+		let newHeight;
+		console.log("Scrolling for follower state initialization...");
+		while (previousHeight !== newHeight) {
+			previousHeight = await instagram.page.evaluate(
+				`document.querySelector("${scrollableSectionSelector}").scrollHeight`
+			);
+			await instagram.page.evaluate(
+				`document.querySelector("${scrollableSectionSelector}").scrollTop = ${previousHeight}`
+			);
+			await instagram.page.waitForTimeout(500);
+			newHeight = await instagram.page.evaluate(
+				`document.querySelector("${scrollableSectionSelector}").scrollHeight`
+			);
+		}
+
+		const extractedDivTags = await instagram.page.$x(
+			//Followers
+			"//html/body/div[5]/div/div/div[2]/ul/div/li/div/div[1]/div[2]/div[2]"
+		);
+		const extractedATags = await instagram.page.$x(
+			"//html/body/div[5]/div/div/div[2]/ul/div/li/div/div[1]/div[2]/div[1]/span/a"
+		);
+		const items = [];
+		for (let i = 0; i < extractedDivTags.length - 1; i++) {
+			//First name last name
+			const name = await instagram.page.evaluate(
+				(el) => el.innerText,
+				extractedDivTags[i]
+			);
+			const username = await instagram.page.evaluate(
+				(el) => el.innerText,
+				extractedATags[i]
+			);
+			await extractedATags[i].hover();
+			await instagram.page.waitForTimeout(2000);
+			const fCountElement = await instagram.page.waitForSelector(
+				"body > div.GdeD6.AzWhO > div > div > div:nth-child(2) > div > div > div:nth-child(2) > span > span"
+			);
+			const fCount = await instagram.page.evaluate(
+				(el) => el.innerText,
+				fCountElement
+			);
+			console.log(
+				"Preparing index",
+				`${i + 1};`,
+				`${fCount} followers;`,
+				`@${username};`
+			);
+			await instagram.page.mouse.move(0, 100);
+			await instagram.page.waitForTimeout(500);
+
+			items.push({ name, username, fCount });
+		}
+
+		// Save extracted items to a file.
+		var str = items
+			.map((elem) => {
+				return `${elem.name} (@${elem.username}); Followers: ${elem.fCount}`;
+			})
+			.join("\n");
+
+		fs.writeFileSync("./items.txt", str + "\n");
+
+		// Close the browser.
+		console.log("Done..!");
+		await instagram.browser.close();
+	},
+
+	getFollowerInformationViaNewTabs: async () => {
 		//Get total followers
 		const followersTotalSelector =
 			"#react-root > section > main > div > header > section > ul > li:nth-child(2) > a > span";
@@ -166,36 +207,53 @@ const instagram = {
 			);
 		}
 
-		const extractedElements = await instagram.page.$x(
+		const extractedDivTags = await instagram.page.$x(
 			//Followers
-			"//html/body/div[5]/div/div/div[2]/ul/div/li"
+			"//html/body/div[5]/div/div/div[2]/ul/div/li/div/div[1]/div[2]/div[2]"
+		);
+		const extractedATags = await instagram.page.$x(
+			"//html/body/div[5]/div/div/div[2]/ul/div/li/div/div[1]/div[2]/div[1]/span/a"
 		);
 		const items = [];
-		for (let elementHandle of extractedElements) {
+		for (let i = 0; i < extractedDivTags.length - 1; i++) {
 			//First name last name
-			const name = await elementHandle.$eval(
-				"div > div:nth-child(1) > div:nth-child(2) > div:nth-child(1)> span > a",
-				(node) => node.innerText
+			const name = await instagram.page.evaluate(
+				(el) => el.innerText,
+				extractedDivTags[i]
+			);
+			const username = await instagram.page.evaluate(
+				(el) => el.innerText,
+				extractedATags[i]
 			);
 
-			await elementHandle.hover();
-			await instagram.page.waitForTimeout(2000);
+			const newPage = await instagram.browser.newPage();
+			await newPage.goto(BASE_URL + username);
 
-			const fCount = await instagram.page.evaluate(
-				`document.querySelector("body > div.GdeD6.AzWhO > div > div > div:nth-child(2) > div > div > div:nth-child(2) > span > span").innerHtml`
+			const fCountElementHandle = await newPage.waitForSelector(
+				"#react-root > section > main > div > header > section > ul > li:nth-child(2) > a > span, #react-root > section > main > div > header > section > ul > li:nth-child(2) > span > span",
+				{
+					timeout: 3000,
+				}
 			);
-
-			items.push({ name, fCount });
+			const fCount = await newPage.evaluate(
+				(el) => el.innerText,
+				fCountElementHandle
+			);
+			await items.push({ name, username, fCount });
+			await newPage.close();
 		}
-		debugger;
 
-		// const items = getPaginatedItems(instagram, totalFollowers);
+		// Save extracted items to a file.
+		var str = items
+			.map((elem) => {
+				return `${elem.name} (@${elem.username}); Followers: ${elem.fCount}`;
+			})
+			.join("\n");
 
-		// // Save extracted items to a file.
-		// fs.writeFileSync("./items.txt", items.join("\n") + "\n");
+		fs.writeFileSync("./items.txt", str + "\n");
 
-		// // Close the browser.
-		// await instagram.browser.close();
+		// Close the browser.
+		await instagram.browser.close();
 	},
 };
 
