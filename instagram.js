@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-let exPath = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
+var log = require("single-line-log").stdout;
+// let exPath = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe";
 
 const BASE_URL = "https://instagram.com/";
 
@@ -139,11 +140,10 @@ const instagram = {
 				(el) => el.innerText,
 				fCountElement
 			);
-			console.log(
-				"Preparing index",
-				`${i + 1};`,
-				`${fCount} followers;`,
-				`@${username};`
+			log(
+				`■ Preparing ${Math.trunc(
+					(i / extractedDivTags.length) * 100
+				)}% ■`
 			);
 			await instagram.page.mouse.move(0, 100);
 			await instagram.page.waitForTimeout(500);

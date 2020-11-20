@@ -1,7 +1,7 @@
 const ig = require("./instagram");
 
-const username = "4stephenhorton@gmail.com";
-const password = "001324197Mormondude1";
+const username = "youremailhere@gmail.com";
+const password = "yourpasswordhere";
 
 (async () => {
 	await ig.initialize();
