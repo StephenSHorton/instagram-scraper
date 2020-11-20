@@ -120,7 +120,7 @@ const instagram = {
 		const extractedATags = await instagram.page.$x(
 			"//html/body/div[5]/div/div/div[2]/ul/div/li/div/div[1]/div[2]/div[1]/span/a"
 		);
-		const items = [];
+		// const items = [];
 		for (let i = 0; i < extractedDivTags.length - 1; i++) {
 			//First name last name
 			const name = await instagram.page.evaluate(
@@ -148,17 +148,24 @@ const instagram = {
 			await instagram.page.mouse.move(0, 100);
 			await instagram.page.waitForTimeout(500);
 
-			items.push({ name, username, fCount });
+			// items.push({ name, username, fCount });
+			fs.appendFile(
+				"items.txt",
+				`${name} (@${username}); Followers: ${fCount}\n`,
+				(err) => {
+					if (err) throw err;
+				}
+			);
 		}
 
 		// Save extracted items to a file.
-		var str = items
-			.map((elem) => {
-				return `${elem.name} (@${elem.username}); Followers: ${elem.fCount}`;
-			})
-			.join("\n");
+		// var str = items
+		// 	.map((elem) => {
+		// 		return `${elem.name} (@${elem.username}); Followers: ${elem.fCount}`;
+		// 	})
+		// 	.join("\n");
 
-		fs.writeFileSync("./items.txt", str + "\n");
+		// fs.writeFileSync("./items.txt", str + "\n");
 
 		// Close the browser.
 		console.log("Done..!");
