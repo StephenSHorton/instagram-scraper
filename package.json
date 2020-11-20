@@ -1,0 +1,16 @@
+{
+  "name": "aj_scraper",
+  "version": "1.0.0",
+  "description": "-   https://intoli.com/blog/scrape-infinite-scroll/\r -   https://stackoverflow.com/questions/52030394/how-to-scroll-inside-a-div-with-puppeteer",
+  "main": "index.js",
+  "dependencies": {
+    "puppeteer": "^5.5.0",
+    "single-line-log": "^1.1.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
