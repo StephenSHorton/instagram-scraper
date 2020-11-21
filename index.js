@@ -10,6 +10,6 @@ const password = "Jazzordie1";
 
 	await ig.navigateToProfile();
 
-	await ig.getFollowerInformation();
-	// await ig.getFollowerInformationViaNewTabs();
+	// await ig.getFollowerInformation();
+	await ig.getFollowerInformationViaNewTabs();
 })();
